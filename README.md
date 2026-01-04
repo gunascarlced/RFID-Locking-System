@@ -23,7 +23,7 @@ A dual-authentication security system using an MFRC522 RFID reader and a 4x4 Key
 ## 🛠 Hardware Requirements
 
 ### Core Electronic Components
-These are the main parts directly referenced in the code and circuit diagram.
+These are the main parts used in the project.
 
 | Component | Quantity | Purpose |
 | :--- | :---: | :--- |
