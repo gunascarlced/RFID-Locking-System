@@ -104,22 +104,23 @@ void handleMasterCard(const String& uid) {
     lcd.setCursor(0, 0);
     lcd.print("Master Mode");
     lcd.setCursor(0, 1);
-    lcd.print("A: Change Pass");
+    lcd.print("D: Grant  A: Pass");
 
-    char key;
-    while (true) {
-        key = myKeypad.getKey();
+    unsigned long startTime = millis();
+    while (millis() - startTime < timeoutDuration) {
+        char key = myKeypad.getKey();
         if (key) {
-            if (key == 'A') { //actually "D" key
-                grantAccess(uid); // Override access
-                return; // Exit the function
+            if (key == 'D') { // 'D' key for grant access
+                grantAccess(uid);
+                return;
             }
-            if (key == 'D') { //actually "A" key
-                changePasscode(); // Change the password
-                return; // Exit the function after changing the password
+            if (key == 'A') { // 'A' key for change passcode
+                changePasscode();
+                return;
             }
         }
     }
+    resetToScan(); // Timeout, reset to scan
 }
 
 // Change pass state
@@ -131,11 +132,13 @@ void changePasscode() {
     lcd.print("Password: ");
     String inputMasterPassword = "";
     char key;
+    unsigned long startTime = millis();
 
     // Step 1: Enter Master Password
-    while (true) {
+    while (millis() - startTime < timeoutDuration) {
         key = myKeypad.getKey();
         if (key) {
+            startTime = millis(); // Reset timeout on input
             if (key == '#') {
                 if (inputMasterPassword.equals(masterPassword)) {
                     // Step 2: Enter New Passcode
@@ -143,9 +146,11 @@ void changePasscode() {
                     lcd.setCursor(0, 0);
                     lcd.print("Enter New Pass:");
                     String newPasscode = "";
-                    while (true) {
+                    unsigned long startTime2 = millis();
+                    while (millis() - startTime2 < timeoutDuration) {
                         key = myKeypad.getKey();
                         if (key) {
+                            startTime2 = millis(); // Reset timeout on input
                             if (key == '#') {
                                 if (newPasscode.length() > 0) {
                                     passcode = newPasscode; // Update the passcode
@@ -161,7 +166,7 @@ void changePasscode() {
                                 }
                                 resetToScan(); // Reset back to scan state
                                 return;
-                            } else if (key == 'C') { // actually "B" key to delete/backspace
+                            } else if (key == 'C') { // 'C' key to delete/backspace
                                 if (newPasscode.length() > 0) {
                                     newPasscode.remove(newPasscode.length() - 1); // Remove last character
                                     lcd.setCursor(0, 1);
@@ -178,6 +183,8 @@ void changePasscode() {
                             }
                         }
                     }
+                    resetToScan(); // Timeout in new passcode entry
+                    return;
                 } else {
                     lcd.clear();
                     lcd.setCursor(0, 0);
@@ -186,7 +193,7 @@ void changePasscode() {
                     resetToScan(); // Reset back to scan state
                     return;
                 }
-            } else if (key == 'C') { // actually "B" key to delete/backspace
+            } else if (key == 'C') { // 'C' key to delete/backspace
                 if (inputMasterPassword.length() > 0) {
                     inputMasterPassword.remove(inputMasterPassword.length() - 1); // Backspace
                     lcd.setCursor(10, 1);
@@ -203,12 +210,14 @@ void changePasscode() {
             }
         }
     }
+    resetToScan(); // Timeout in master password entry
 }
 
 // scanning UID of cards state
 String scanUID() {
     String uid = "";
-    while (true) {
+    unsigned long startTime = millis();
+    while (millis() - startTime < timeoutDuration) {
         if (!rfid.PICC_IsNewCardPresent()) {
             delay(100);
             continue;
@@ -225,9 +234,9 @@ String scanUID() {
         }
         Serial.print("UID scanned: ");
         Serial.println(uid); // print uid in serial monitor
-        break; // Exit loop
+        return uid; // return the scanned UID
     }
-    return uid; // return the scanned UID
+    return ""; // Timeout, return empty
 }
 
 // Grant access state
@@ -239,6 +248,8 @@ void grantAccess(const String& uid) {
     tone(BUZZER_PIN, 659, 150);
     delay(150); // play the access granted sound
     myServo.write(0); // Set servo to 0 degrees (access granted / unlock door)
+    delay(5000); // Auto-close after 5 seconds
+    myServo.write(180); // Close the door
 }
 
 // Function to deny access and activate the servo
@@ -265,10 +276,12 @@ void inputPassword(const String& uid) {
     lcd.print("Enter Password:");
     String inputPassword = "";
     char key;
+    unsigned long startTime = millis();
 
-    while (true) {
+    while (millis() - startTime < timeoutDuration) {
         key = myKeypad.getKey();
         if (key) {
+            startTime = millis(); // Reset timeout on input
             if (key == '#') {
                 if (inputPassword.equals(passcode)) {
                     lcd.clear();
@@ -279,19 +292,19 @@ void inputPassword(const String& uid) {
                 } else {
                     lcd.clear();
                     lcd.setCursor(0, 0);
-                    lcd.print("Access Denied"); // wrong passwoird
+                    lcd.print("Access Denied"); // wrong password
                     delay(2000);
                     denyAccess();
                 }
                 resetToScan(); // Reset to scan state
                 return;
-            } else if (key == 'C') { // actually "B" key to delete/backspace
+            } else if (key == 'C') { // 'C' key to delete/backspace
                 if (inputPassword.length() > 0) {
                     inputPassword.remove(inputPassword.length() - 1); // Remove last character
                     lcd.setCursor(0, 1);
                     lcd.print("                "); // Clear the line
                     lcd.setCursor(0, 1);
-                    lcd.print(generateAsterisks(inputPassword.length())); // Display asterisks intead of actiual number
+                    lcd.print(generateAsterisks(inputPassword.length())); // Display asterisks instead of actual number
                 }
             } else {
                 inputPassword += key;
@@ -302,12 +315,15 @@ void inputPassword(const String& uid) {
             }
         }
     }
+    resetToScan(); // Timeout, reset to scan
 }
 
 // welcome message state print to lcd
 void displayWelcomeMessage(const String& uid) {
     for (int i = 0; i < sizeof(uidMessages) / sizeof(uidMessages[0]); i++) {
         if (uid.equalsIgnoreCase(uidMessages[i].uid)) {
+            lcd.setCursor(0, 1);
+            lcd.print("                "); // Clear the line
             lcd.setCursor(0, 1);
             lcd.print(uidMessages[i].message); // Display the unique message
             delay(2000); // Display the message for 2 seconds before going back to scan state
@@ -316,7 +332,7 @@ void displayWelcomeMessage(const String& uid) {
     }
 }
 
-// generate asterisk instead of numebr state
+// generate asterisk instead of number state
 String generateAsterisks(int length) {
     String asterisks = "";
     for (int i = 0; i < length; i++) {
@@ -330,37 +346,25 @@ void loop() {
         resetToScan(); // check last input before going back to scan state
     }
 
-    if (!rfid.PICC_IsNewCardPresent()) return; // Check for new card
-    if (!rfid.PICC_ReadCardSerial()) return; // Read card serial
-
-    lastInputTime = millis(); // Update last input time
     String uidString = scanUID(); // Scan the UID
-
-    if (isMasterCard(uidString)) {
-        handleMasterCard(uidString); // master card uid
-    } else {
-        if (checkUID(uidString)) {
-            inputPassword(uidString); // if regustered uid proceed to input password
+    if (uidString != "") { // Only proceed if a UID was scanned
+        lastInputTime = millis(); // Update last input time
+        if (isMasterCard(uidString)) {
+            handleMasterCard(uidString); // master card uid
         } else {
-            lcd.clear();
-            lcd.setCursor(0, 0);
-            lcd.print("Access Denied");
-            lcd.setCursor(0, 1);
-            lcd.print("Try Again");
-            denyAccess(); // Deny access if UID is in the lisrt
+            if (checkUID(uidString)) {
+                inputPassword(uidString); // if registered uid proceed to input password
+            } else {
+                lcd.clear();
+                lcd.setCursor(0, 0);
+                lcd.print("Access Denied");
+                lcd.setCursor(0, 1);
+                lcd.print("Try Again");
+                denyAccess(); // Deny access if UID is not in the list
+            }
         }
     }
 
     rfid.PICC_HaltA(); // Halt the PICC
     rfid.PCD_StopCrypto1(); // Stop encryption
-}
-
-// find the unique message state
-int findMessageIndex(const String& uid) {
-    for (int i = 0; i < sizeof(uidMessages) / sizeof(uidMessages[0]); i++) {
-        if (uid.equalsIgnoreCase(uidMessages[i].uid)) {
-            return i; // Return index if UID found, print along with access granted
-        }
-    }
-    return -1; // Return -1 if UID not found, do not print
 }
