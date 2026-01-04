@@ -42,7 +42,7 @@ These are the main parts used in the project.
 * **Jumper Wires (M-M & M-F):** For connecting Arduino pins to components.
 * **Breadboard:** For prototyping and organizing power rails.
 * **Resistor (220Ω):** For current limiting (Buzzer/LCD protection).
-* **RFID Cards/Tags:** 13.56MHz compatible tags for testing access.
+* **RFID Cards/Tags:** Compatible tags for testing access.
 * **USB Cable (Type A to B):** For programming and power.
 
 ---
