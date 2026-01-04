@@ -50,10 +50,10 @@ These are the main parts directly referenced in the code and circuit diagram.
 ## 📦 Required Libraries
 Ensure these libraries are installed in your environment to compile the code:
 
-* **MFRC522** (by GithubCommunity)
-* **LiquidCrystal_I2C** (by Frank de Brabander)
-* **Keypad** (by Mark Stanley, Alexander Brevig)
-* **Servo** (Built-in)
+* **MFRC522**
+* **LiquidCrystal_I2C**
+* **Keypad**
+* **Servo**
 
 ---
 
